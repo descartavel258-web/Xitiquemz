@@ -1236,41 +1236,76 @@ async function doRegister(){
   if(ph.length<8)return toast('Número inválido','err');
   if(pw.length<6)return toast('Senha mínima 6 caracteres','err');
   if(!window.firebaseDB)return toast('Sem ligação ao servidor','err');
-  await loadFirebaseData();
-  if(STATE.users.find(u=>normPhone(u.phone)===ph))return toast('Número já registado','err');
-  let refUser=null;
-  if(rf){
-    refUser=STATE.users.find(u=>u.code===rf);
-    if(!refUser)return toast('Código de convite inválido','err');
+
+  // Evitar duplo clique (cria a conta e depois parece "já registado")
+  const btn=document.querySelector('#af-register .btn.sa-btn');
+  if(btn){
+    if(btn.disabled)return;
+    btn.disabled=true;
+    btn.textContent='A criar conta...';
   }
-  const code='FAC-'+Math.random().toString(36).substr(2,5).toUpperCase();
-  const WELCOME_BONUS=70;
-  const now=Date.now();
-  const newUser={
-    id:now,name:nm,phone:ph,pass:pw,code,
-    balance:WELCOME_BONUS,totalEarned:WELCOME_BONUS,commission:0,level:0,
-    activeDeposits:[],lastDailyPaid:0,
-    taskDone:false,taskDate:'',
-    refs:0,refsActive:0,refEarnings:0,
-    joinDate:new Date().toLocaleDateString('pt'),
-    joinTs:now,
-    withdrawCount:0,totalWithdrawn:0,
-    refCode:rf||null
-  };
-  await saveUserToFirebase(newUser);
-  await saveDepositToFirebase({
-    id:now+1,userId:newUser.id,userName:newUser.name,userPhone:newUser.phone,
-    amount:WELCOME_BONUS,method:'reward',status:'approved',date:now,
-    isReward:true,note:'Bónus de boas-vindas'
-  });
-  if(refUser){
-    refUser.refs=(refUser.refs||0)+1;
-    await updateUserInFirebase(refUser.id,{refs:refUser.refs});
+
+  try{
+    await loadFirebaseData();
+    const exists=STATE.users.find(u=>normPhone(u.phone)===ph);
+    if(exists){
+      // Se a senha for a mesma da conta existente → entrar (não criar de novo)
+      if(String(exists.pass||'')===String(pw)){
+        saveSession(exists.id,exists.phone,true);
+        STATE.user=exists;
+        toast('Já tinhas conta — sessão iniciada','ok');
+        loginUser(exists);
+        return;
+      }
+      // Número existe mas senha diferente
+      toast('Número já registado com outra senha. Usa Entrar ou a senha original.','err');
+      authTab('login');
+      const lp=document.getElementById('l-ph');
+      if(lp)lp.value=ph;
+      return;
+    }
+    let refUser=null;
+    if(rf){
+      refUser=STATE.users.find(u=>u.code===rf);
+      if(!refUser){toast('Código de convite inválido','err');return;}
+    }
+    const code='FAC-'+Math.random().toString(36).substr(2,5).toUpperCase();
+    const WELCOME_BONUS=70;
+    const now=Date.now();
+    const newUser={
+      id:now,name:nm,phone:ph,pass:pw,code,
+      balance:WELCOME_BONUS,totalEarned:WELCOME_BONUS,commission:0,level:0,
+      activeDeposits:[],lastDailyPaid:0,
+      taskDone:false,taskDate:'',
+      refs:0,refsActive:0,refEarnings:0,
+      joinDate:new Date().toLocaleDateString('pt'),
+      joinTs:now,
+      withdrawCount:0,totalWithdrawn:0,
+      refCode:rf||null
+    };
+    const ok=await saveUserToFirebase(newUser);
+    if(!ok){toast('Erro ao criar conta. Tenta de novo.','err');return;}
+    await saveDepositToFirebase({
+      id:now+1,userId:newUser.id,userName:newUser.name,userPhone:newUser.phone,
+      amount:WELCOME_BONUS,method:'reward',status:'approved',date:now,
+      isReward:true,note:'Bónus de boas-vindas'
+    });
+    if(refUser){
+      refUser.refs=(refUser.refs||0)+1;
+      await updateUserInFirebase(refUser.id,{refs:refUser.refs});
+    }
+    saveSession(newUser.id,newUser.phone,true);
+    STATE.user=newUser;
+    showWelcomeModal(newUser);
+  }catch(e){
+    console.warn('doRegister:',e);
+    toast('Erro ao criar conta. Tenta de novo.','err');
+  }finally{
+    if(btn){
+      btn.disabled=false;
+      btn.textContent='Criar Conta Gratuita';
+    }
   }
-  await loadFirebaseData();
-  saveSession(newUser.id,newUser.phone,true);
-  STATE.user=newUser;
-  showWelcomeModal(newUser);
 }
 
 function showWelcomeModal(user){
@@ -1316,8 +1351,16 @@ async function doLogin(){
     }catch(e){
       return toast('Ligação lenta. Verifica a internet e tenta de novo.','err');
     }
-    const u=STATE.users.find(u=>normPhone(u.phone)===ph && String(u.pass||'')===pw);
-    if(!u)return toast('Número ou senha incorrectos','err');
+    const byPhone=STATE.users.filter(u=>normPhone(u.phone)===ph);
+    if(!byPhone.length){
+      toast('Número não encontrado. Cria conta primeiro.','err');
+      return;
+    }
+    const u=byPhone.find(u=>String(u.pass||'')===String(pw));
+    if(!u){
+      toast('Senha incorrecta para este número.','err');
+      return;
+    }
     saveSession(u.id,u.phone,remember);
     loginUser(u);
   }catch(e){
