@@ -585,36 +585,6 @@ html{overscroll-behavior:none}
 .adcard-amt{font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:var(--gold2)}
 .adcard-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .ad-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
-
-/* ═══ WELCOME MODAL ═══ */
-#mo-welcome{position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(20px);z-index:800;display:none;align-items:flex-end;justify-content:center}
-#mo-welcome.active{display:flex}
-.wm-box{background:var(--surface);border-radius:32px 32px 0 0;width:100%;max-width:460px;padding:0 0 36px;max-height:92vh;overflow-y:auto;animation:slideUp .4s cubic-bezier(.16,1,.3,1);border-top:1px solid rgba(255,107,0,0.3)}
-.wm-header{background:linear-gradient(160deg,#1a0600,#2a0e00,#1a0600);padding:32px 24px 28px;text-align:center;position:relative;overflow:hidden;border-radius:32px 32px 0 0}
-.wm-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(255,107,0,0.25),transparent 70%)}
-.wm-coins{display:flex;justify-content:center;gap:8px;margin-bottom:16px;position:relative;z-index:1}
-.wm-coin{width:44px;height:44px;background:linear-gradient(135deg,#FF6B00,#FFA000);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 16px rgba(255,107,0,0.4);animation:float 3s ease-in-out infinite}
-.wm-coin:nth-child(2){animation-delay:.3s;width:56px;height:56px;font-size:26px;box-shadow:0 6px 24px rgba(255,107,0,0.5)}
-.wm-coin:nth-child(3){animation-delay:.6s}
-.wm-bonus-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,107,0,0.15);border:1.5px solid rgba(255,107,0,0.5);border-radius:50px;padding:8px 20px;margin-bottom:14px;position:relative;z-index:1}
-.wm-bonus-val{font-family:'Sora',sans-serif;font-size:28px;font-weight:900;color:#FF6B00}
-.wm-bonus-lbl{font-size:12px;color:rgba(255,180,80,0.8);font-weight:700;line-height:1.3}
-.wm-welcome-txt{font-size:14px;color:rgba(255,255,255,0.7);position:relative;z-index:1}
-.wm-welcome-txt strong{color:#fff;font-size:18px;display:block;margin-bottom:4px}
-.wm-body{padding:24px 20px 0}
-.wm-section-title{font-size:12px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;display:flex;align-items:center;gap:6px}
-.wm-steps{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
-.wm-step{display:flex;align-items:flex-start;gap:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:14px}
-.wm-step-num{min-width:32px;height:32px;background:linear-gradient(135deg,#FF3D00,#FF6B00);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#000}
-.wm-step-txt{flex:1}
-.wm-step-title{font-size:13px;font-weight:800;color:var(--text);margin-bottom:3px}
-.wm-step-sub{font-size:11px;color:var(--text3);line-height:1.5}
-.wm-step-tag{display:inline-block;background:rgba(255,107,0,0.12);border:1px solid rgba(255,107,0,0.3);border-radius:20px;padding:2px 10px;font-size:10px;font-weight:800;color:var(--gold);margin-top:5px}
-.wm-cta{padding:0 20px}
-.wm-cta-btn{width:100%;padding:16px;background:linear-gradient(135deg,#FF3D00,#FF6B00,#FFA000);border:none;border-radius:16px;color:#000;font-family:inherit;font-size:15px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 24px rgba(255,107,0,0.45);letter-spacing:.01em;transition:all .25s}
-.wm-cta-btn:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(255,107,0,0.55)}
-.wm-cta-sub{text-align:center;margin-top:10px;font-size:11px;color:var(--text3)}
-
 </style>
 </head>
 <body>
@@ -1177,7 +1147,7 @@ async function tryAutoLogin(){
   try{
     await Promise.race([loadFirebaseData(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),4000))]);
   }catch(e){return false;}
-  const u=STATE.users.find(u=>u.id===s.userId);
+  const u=STATE.users.find(u=>u.id===s.userId&&u.phone===s.phone);
   if(u){loginUser(u);return true;}
   clearSession();return false;
 }
@@ -1233,79 +1203,39 @@ async function doRegister(){
   const pw=document.getElementById('r-pw').value;
   const rf=(document.getElementById('r-rf')?.value||'').trim().toUpperCase();
   if(!nm||!phRaw||!pw)return toast('Preenche todos os campos','err');
+  // Guardar e comparar no mesmo formato do login (só dígitos)
   const ph=normPhone(phRaw);
-  if(ph.length<8||ph.length>9)return toast('Número inválido (usa 8 ou 9 dígitos)','err');
+  if(ph.length<8)return toast('Número inválido','err');
   if(pw.length<6)return toast('Senha mínima 6 caracteres','err');
   if(!window.firebaseDB)return toast('Sem ligação ao servidor','err');
-
-  // Evitar duplo clique
-  const btn=document.querySelector('#af-register .btn.sa-btn');
-  if(btn){if(btn.disabled)return;btn.disabled=true;btn.textContent='A criar conta...';}
-
-  try{
-    await loadFirebaseData();
-    // Comparar números normalizados (sem espaços, sem +258)
-    const exists=STATE.users.find(u=>normPhone(u.phone)===ph);
-    if(exists){
-      toast('Número já registado. Usa "Entrar" com a tua senha.','err');
-      authTab('login');
-      const lp=document.getElementById('l-ph');
-      if(lp)lp.value=ph;
-      return;
-    }
-    let refUser=null;
-    if(rf){
-      refUser=STATE.users.find(u=>u.code===rf);
-      if(!refUser)return toast('Código de convite inválido','err');
-    }
-    const code='FAC-'+Math.random().toString(36).substr(2,5).toUpperCase();
-    const WELCOME_BONUS=70;
-    const now=Date.now();
-    const newUser={
-      id:now,name:nm,phone:ph,pass:pw,code,
-      balance:WELCOME_BONUS,totalEarned:WELCOME_BONUS,commission:0,level:0,
-      activeDeposits:[],lastDailyPaid:0,
-      taskDone:false,taskDate:'',
-      refs:0,refsActive:0,refEarnings:0,
-      joinDate:new Date().toLocaleDateString('pt'),
-      joinTs:now,
-      withdrawCount:0,totalWithdrawn:0,
-      refCode:rf||null
-    };
-    const ok=await saveUserToFirebase(newUser);
-    if(!ok)return toast('Erro ao criar conta. Tenta de novo.','err');
-    await saveDepositToFirebase({
-      id:now+1,userId:newUser.id,userName:newUser.name,userPhone:newUser.phone,
-      amount:WELCOME_BONUS,method:'reward',status:'approved',date:now,
-      isReward:true,note:'Bónus de boas-vindas'
-    });
-    if(refUser){
-      refUser.refs=(refUser.refs||0)+1;
-      await updateUserInFirebase(refUser.id,{refs:refUser.refs});
-    }
-    await loadFirebaseData();
-    saveSession(newUser.id,newUser.phone,true);
-    STATE.user=newUser;
-    showWelcomeModal(newUser);
-  }catch(e){
-    console.warn('doRegister:',e);
-    toast('Erro ao criar conta. Tenta de novo.','err');
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent='Criar Conta Gratuita';}
+  await loadFirebaseData();
+  if(STATE.users.find(u=>normPhone(u.phone)===ph))return toast('Número já registado','err');
+  let refUser=null;
+  if(rf){
+    refUser=STATE.users.find(u=>u.code===rf);
+    if(!refUser)return toast('Código de convite inválido','err');
   }
-}
-
-function showWelcomeModal(user){
-  const el=document.getElementById('wm-name');
-  if(el)el.textContent=user.name.split(' ')[0];
-  const mo=document.getElementById('mo-welcome');
-  if(mo)mo.classList.add('active');
-}
-
-function closeWelcomeAndEnter(){
-  const mo=document.getElementById('mo-welcome');
-  if(mo)mo.classList.remove('active');
-  loginUser(STATE.user);
+  const code='FAC-'+Math.random().toString(36).substr(2,5).toUpperCase();
+  const newUser={
+    id:Date.now(),name:nm,phone:ph,pass:pw,code,
+    balance:0,totalEarned:0,commission:0,level:0,
+    activeDeposits:[],lastDailyPaid:0,
+    taskDone:false,taskDate:'',
+    refs:0,refsActive:0,refEarnings:0,
+    joinDate:new Date().toLocaleDateString('pt'),
+    joinTs:Date.now(),
+    withdrawCount:0,totalWithdrawn:0,
+    refCode:rf||null
+  };
+  await saveUserToFirebase(newUser);
+  if(refUser){
+    refUser.refs=(refUser.refs||0)+1;
+    await updateUserInFirebase(refUser.id,{refs:refUser.refs});
+  }
+  await loadFirebaseData();
+  toast('Conta criada com sucesso! 🎉','ok');
+  saveSession(newUser.id,newUser.phone,true);
+  setTimeout(()=>loginUser(newUser),700);
 }
 
 // Taps ocultos para abrir admin
@@ -1338,12 +1268,9 @@ async function doLogin(){
     }catch(e){
       return toast('Ligação lenta. Verifica a internet e tenta de novo.','err');
     }
-    const u=STATE.users.find(u=>{
-      return normPhone(u.phone)===ph && String(u.pass||'')===pw;
-    });
+    const u=STATE.users.find(u=>normPhone(u.phone)===ph && String(u.pass||'')===pw);
     if(!u)return toast('Número ou senha incorrectos','err');
     saveSession(u.id,u.phone,remember);
-    // Login normal NÃO mostra o modal de boas-vindas (só no registo)
     loginUser(u);
   }catch(e){
     toast('Erro ao entrar. Tenta novamente.','err');
@@ -1946,84 +1873,5 @@ initCoins();
   else setTimeout(()=>{if(!STATE.user)showScreen('sa');},500);
 })();
 </script>
-
-<!-- WELCOME MODAL -->
-<div id="mo-welcome">
-  <div class="wm-box">
-    <div class="wm-header">
-      <div class="wm-coins">
-        <div class="wm-coin">🪙</div>
-        <div class="wm-coin">💰</div>
-        <div class="wm-coin">🪙</div>
-      </div>
-      <div class="wm-bonus-badge">
-        <div>
-          <div class="wm-bonus-val">+70 MT</div>
-          <div class="wm-bonus-lbl">Bónus de<br>boas-vindas</div>
-        </div>
-      </div>
-      <div class="wm-welcome-txt">
-        <strong>Bem-vindo(a), <span id="wm-name">Amigo</span>! 🎉</strong>
-        Os teus primeiros 70 MT já estão na tua carteira.
-      </div>
-    </div>
-    <div class="wm-body">
-      <div class="wm-section-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Como funciona o FACIM
-      </div>
-      <div class="wm-steps">
-        <div class="wm-step">
-          <div class="wm-step-num">1</div>
-          <div class="wm-step-txt">
-            <div class="wm-step-title">Activa o teu VIP</div>
-            <div class="wm-step-sub">Escolhe um plano VIP e faz o depósito via M-Pesa ou e-Mola. O admin aprova em minutos.</div>
-            <span class="wm-step-tag">Desde 350 MT</span>
-          </div>
-        </div>
-        <div class="wm-step">
-          <div class="wm-step-num">2</div>
-          <div class="wm-step-txt">
-            <div class="wm-step-title">Ganha 20% ao dia</div>
-            <div class="wm-step-sub">O teu saldo cresce automaticamente todos os dias com 20% de rendimento. Sem esforço.</div>
-            <span class="wm-step-tag">Automático</span>
-          </div>
-        </div>
-        <div class="wm-step">
-          <div class="wm-step-num">3</div>
-          <div class="wm-step-txt">
-            <div class="wm-step-title">Tarefa diária +30 MT</div>
-            <div class="wm-step-sub">Partilha o link todos os dias e ganha 30 MT de bónus extra. Simples e rápido.</div>
-            <span class="wm-step-tag">Todo dia</span>
-          </div>
-        </div>
-        <div class="wm-step">
-          <div class="wm-step-num">4</div>
-          <div class="wm-step-txt">
-            <div class="wm-step-title">Convida e ganha 50 MT</div>
-            <div class="wm-step-sub">Por cada amigo que activar o VIP com o teu código, recebes 50 MT de comissão.</div>
-            <span class="wm-step-tag">Sem limite</span>
-          </div>
-        </div>
-        <div class="wm-step">
-          <div class="wm-step-num">5</div>
-          <div class="wm-step-txt">
-            <div class="wm-step-title">Saca no último dia do VIP</div>
-            <div class="wm-step-sub">O teu lucro total fica disponível para saque no dia final do pacote VIP escolhido.</div>
-            <span class="wm-step-tag">1 saque por VIP</span>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="wm-cta">
-      <button class="wm-cta-btn" onclick="closeWelcomeAndEnter()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M5 3l14 9-14 9V3z"/></svg>
-        Começar a Ganhar!
-      </button>
-      <div class="wm-cta-sub">Os teus 70 MT já estão na carteira ✓</div>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>
