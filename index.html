@@ -586,6 +586,9 @@ html{overscroll-behavior:none}
 .adcard-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .ad-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
 </style>
+<style>
+@keyframes pulse-dot{0%,100%{opacity:0.4;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}}
+</style>
 </head>
 <body>
 <div id="tc"></div>
@@ -1236,16 +1239,69 @@ async function doRegister(){
 }
 
 
+
+const _NAMES = ['Ana Silva','Carlos M.','Beatriz N.','João P.','Fátima A.',
+  'Miguel R.','Sofia T.','Eduardo L.','Inês C.','António F.',
+  'Lucia V.','Pedro H.','Mariana S.','David K.','Rosa M.',
+  'Alberto J.','Celeste N.','Manuel G.','Dina F.','Hélio T.'];
+
+const _VIPS = [
+  {name:'VIP 1',val:350},{name:'VIP 2',val:750},{name:'VIP 3',val:1500},
+  {name:'VIP 4',val:3000},{name:'VIP 5',val:6000},{name:'VIP 6',val:10000}
+];
+
+function _rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function _fmtMT(v){ return v.toLocaleString('pt-MZ')+' MT'; }
+
+function _genFeedMsg(){
+  const isDeposit = Math.random() > 0.4;
+  const name = _rnd(_NAMES);
+  if(isDeposit){
+    const vip = _rnd(_VIPS);
+    return `💳 <strong>${name}</strong> depositou <strong style="color:#FFA500">${_fmtMT(vip.val)}</strong> no ${vip.name}`;
+  } else {
+    const vip = _rnd(_VIPS);
+    const profit = Math.round(vip.val * 0.20 * (Math.floor(Math.random()*vip.val/1000)+3));
+    return `💰 <strong>${name}</strong> sacou <strong style="color:#10B981">${_fmtMT(profit)}</strong> de lucro`;
+  }
+}
+
+let _feedInterval = null;
+function _startWelcomeFeed(){
+  const ids = ['wfeed-1','wfeed-2','wfeed-3'];
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = _genFeedMsg();
+  });
+  _feedInterval = setInterval(()=>{
+    const id = _rnd(ids);
+    const el = document.getElementById(id);
+    if(el){
+      el.style.opacity='0';
+      setTimeout(()=>{
+        el.innerHTML = _genFeedMsg();
+        el.style.transition='opacity .4s';
+        el.style.opacity='1';
+      },300);
+    }
+  }, 8000);
+}
+function _stopWelcomeFeed(){
+  if(_feedInterval){ clearInterval(_feedInterval); _feedInterval=null; }
+}
+
 function showWelcome(name){
   const el = document.getElementById('mo-welcome');
   const nameEl = document.getElementById('welcome-name');
   if(nameEl) nameEl.textContent = 'Bem-vindo(a), ' + name + '! 🎉';
   if(el){ el.style.display='flex'; }
+  _startWelcomeFeed();
 }
 function closeWelcome(){
+  _stopWelcomeFeed();
   const el = document.getElementById('mo-welcome');
   if(el){ el.style.display='none'; }
-  goPage('pg-deposit');
+  goPage('pg-home');
 }
 
 // Taps ocultos para abrir admin
@@ -1904,7 +1960,7 @@ initCoins();
       </div>
       <div id="welcome-name" style="font-family:Sora,sans-serif;font-size:20px;font-weight:800;color:#fff;margin-bottom:6px">Bem-vindo(a)! 🎉</div>
       <div style="font-size:13px;color:rgba(255,160,0,0.6)">Os teus primeiros 70 MT já estão na tua carteira.</div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:6px">⚠ Disponíveis após o primeiro depósito</div>
+      
     </div>
 
     <!-- How it works -->
@@ -1954,9 +2010,29 @@ initCoins();
         </div>
       </div>
 
+
+      <!-- Activity Feed -->
+      <div style="margin-top:20px;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;color:rgba(255,107,0,0.5);letter-spacing:.15em;text-transform:uppercase;margin-bottom:10px">● Actividade recente</div>
+        <div id="welcome-feed" style="display:flex;flex-direction:column;gap:8px">
+          <div class="wfeed-item" style="background:rgba(255,107,0,0.06);border:1px solid rgba(255,107,0,0.12);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#10B981;flex-shrink:0;animation:pulse-dot 1.5s ease-in-out infinite"></div>
+            <span id="wfeed-1" style="font-size:12px;color:#ccc">A carregar...</span>
+          </div>
+          <div class="wfeed-item" style="background:rgba(255,107,0,0.06);border:1px solid rgba(255,107,0,0.12);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#FF6B00;flex-shrink:0;animation:pulse-dot 1.5s ease-in-out infinite 0.5s"></div>
+            <span id="wfeed-2" style="font-size:12px;color:#ccc">A carregar...</span>
+          </div>
+          <div class="wfeed-item" style="background:rgba(255,107,0,0.06);border:1px solid rgba(255,107,0,0.12);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#FFA500;flex-shrink:0;animation:pulse-dot 1.5s ease-in-out infinite 1s"></div>
+            <span id="wfeed-3" style="font-size:12px;color:#ccc">A carregar...</span>
+          </div>
+        </div>
+      </div>
+
       <!-- CTA Button -->
       <button onclick="closeWelcome()" style="width:100%;margin-top:24px;background:linear-gradient(135deg,#FF6B00,#FFA500);border:none;border-radius:16px;padding:16px;font-family:Sora,sans-serif;font-size:16px;font-weight:800;color:#fff;cursor:pointer;box-shadow:0 6px 24px rgba(255,107,0,0.4);letter-spacing:.03em">
-        🚀 Começar a Ganhar
+        🚀 Vamos Começar!
       </button>
     </div>
   </div>
