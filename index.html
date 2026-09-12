@@ -726,6 +726,12 @@ html{overscroll-behavior:none}
   <!-- WEEKEND BANNER -->
   <div id="weekend-bar" style="margin:0 16px 12px"></div>
 
+  <!-- LIVE ACTIVITY FEED -->
+  <div style="margin:0 16px 12px">
+    <div style="font-size:10px;font-weight:700;color:rgba(255,107,0,0.55);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;padding-left:2px">● Actividade recente</div>
+    <div id="live-feed"></div>
+  </div>
+
   <!-- DAILY TASK -->
   <div id="task-area" style="margin:0 16px 12px"></div>
 
@@ -1010,6 +1016,7 @@ const LEVELS = [
   {id:6,name:'VIP 6',color:'lc6',deposit:10000,daily:2000, totalProfit:48000,durationDays:24}
 ];
 const REFERRAL_BONUS = 50;
+const WELCOME_BONUS = 70;
 const PAYMENT_NAME_MASK = "Wil*** Aug*****";
 const ADMIN_PW = 'admin2024';
 const STORAGE_KEY = 'facim_user_session';
@@ -1215,16 +1222,23 @@ async function doRegister(){
   const code='FAC-'+Math.random().toString(36).substr(2,5).toUpperCase();
   const newUser={
     id:Date.now(),name:nm,phone:ph,pass:pw,code,
-    balance:0,totalEarned:0,commission:0,level:0,
+    balance:WELCOME_BONUS,totalEarned:WELCOME_BONUS,commission:0,level:0,
     activeDeposits:[],lastDailyPaid:0,
     taskDone:false,taskDate:'',
     refs:0,refsActive:0,refEarnings:0,
     joinDate:new Date().toLocaleDateString('pt'),
     joinTs:Date.now(),
     withdrawCount:0,totalWithdrawn:0,
-    refCode:rf||null
+    refCode:rf||null,
+    welcomeBonus:WELCOME_BONUS
   };
   await saveUserToFirebase(newUser);
+  // Registo do bónus de boas-vindas (não sacável sem VIP)
+  await saveDepositToFirebase({
+    id:Date.now()+1,userId:newUser.id,userName:newUser.name,userPhone:newUser.phone,
+    amount:WELCOME_BONUS,method:'welcome',status:'approved',date:Date.now(),
+    isReward:true,isWelcome:true,note:'Bónus de boas-vindas'
+  });
   if(refUser){
     refUser.refs=(refUser.refs||0)+1;
     await updateUserInFirebase(refUser.id,{refs:refUser.refs});
@@ -1813,16 +1827,20 @@ function renderAdContent(){
 // Aprovar depósito: activa VIP + paga comissão ao quem convidou
 async function appDep(id){
   await loadFirebaseData();
-  const d=STATE.deposits.find(d=>d.id==id);if(!d)return;
+  const d=STATE.deposits.find(d=>String(d.id)==String(id));if(!d)return;
+  if(d.status==='approved')return toast('Já está aprovado','err');
   const now=Date.now();
   d.status='approved';d.approvedAt=now;
   await saveDepositToFirebase(d);
-  const u=STATE.users.find(u=>u.id===d.userId);
+  const u=STATE.users.find(u=>String(u.id)===String(d.userId));
   if(u){
+    const depositAmt=Number(d.amount)||0;
     u.level=Number(d.levelId);
     u.lastDailyPaid=now;
     u.withdrawCount=0;
-    await updateUserInFirebase(u.id,{level:u.level,lastDailyPaid:u.lastDailyPaid,withdrawCount:0});
+    u.balance=(u.balance||0)+depositAmt;
+    u.totalEarned=(u.totalEarned||0)+depositAmt;
+    await updateUserInFirebase(u.id,{level:u.level,lastDailyPaid:u.lastDailyPaid,withdrawCount:0,balance:u.balance,totalEarned:u.totalEarned});
     // Comissão de referido — apenas no primeiro depósito aprovado
     const prevApproved=STATE.deposits.filter(dep=>dep.userId===u.id&&dep.status==='approved'&&!dep.isReward&&!dep.isRef&&dep.id!=id);
     if(prevApproved.length===0&&u.refCode){
