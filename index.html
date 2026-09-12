@@ -1229,7 +1229,23 @@ async function doRegister(){
   await loadFirebaseData();
   toast('Conta criada com sucesso! 🎉','ok');
   saveSession(newUser.id,newUser.phone,true);
-  setTimeout(()=>loginUser(newUser),700);
+  setTimeout(()=>{
+    loginUser(newUser);
+    setTimeout(()=>showWelcome(newUser.name), 1200);
+  },700);
+}
+
+
+function showWelcome(name){
+  const el = document.getElementById('mo-welcome');
+  const nameEl = document.getElementById('welcome-name');
+  if(nameEl) nameEl.textContent = 'Bem-vindo(a), ' + name + '! 🎉';
+  if(el){ el.style.display='flex'; }
+}
+function closeWelcome(){
+  const el = document.getElementById('mo-welcome');
+  if(el){ el.style.display='none'; }
+  goPage('pg-deposit');
 }
 
 // Taps ocultos para abrir admin
@@ -1870,5 +1886,81 @@ initCoins();
   else setTimeout(()=>{if(!STATE.user)showScreen('sa');},500);
 })();
 </script>
+
+<!-- WELCOME MODAL -->
+<div id="mo-welcome" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);align-items:flex-end;justify-content:center">
+  <div style="background:#1A0A00;border-radius:28px 28px 0 0;padding:0 0 32px;width:100%;max-height:92vh;overflow-y:auto;border-top:2px solid rgba(255,107,0,0.4)">
+
+    <!-- Bonus Header -->
+    <div style="background:linear-gradient(160deg,#3A1500,#2A0D00);padding:32px 24px 28px;text-align:center;position:relative">
+      <div style="display:flex;justify-content:center;gap:12px;margin-bottom:16px">
+        <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FF8C00,#FFA500);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 15px rgba(255,140,0,0.4)">1️⃣</div>
+        <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#FF6B00,#FF8C00);display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 6px 20px rgba(255,107,0,0.5);margin-top:-6px">💰</div>
+        <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FF8C00,#FFA500);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 15px rgba(255,140,0,0.4)">1️⃣</div>
+      </div>
+      <div style="background:rgba(255,107,0,0.2);border:2px solid rgba(255,107,0,0.4);border-radius:50px;display:inline-block;padding:10px 28px;margin-bottom:16px">
+        <div style="font-family:Sora,sans-serif;font-size:32px;font-weight:900;color:#FFA500">+70 MT</div>
+        <div style="font-size:12px;color:rgba(255,160,0,0.7);margin-top:2px">Bónus de boas-vindas</div>
+      </div>
+      <div id="welcome-name" style="font-family:Sora,sans-serif;font-size:20px;font-weight:800;color:#fff;margin-bottom:6px">Bem-vindo(a)! 🎉</div>
+      <div style="font-size:13px;color:rgba(255,160,0,0.6)">Os teus primeiros 70 MT já estão na tua carteira.</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:6px">⚠ Disponíveis após o primeiro depósito</div>
+    </div>
+
+    <!-- How it works -->
+    <div style="padding:24px 20px 0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
+        <div style="width:20px;height:20px;border-radius:50%;border:2px solid #FF6B00;display:flex;align-items:center;justify-content:center">
+          <div style="width:8px;height:8px;border-radius:50%;background:#FF6B00"></div>
+        </div>
+        <span style="font-size:13px;font-weight:800;color:#FF6B00;letter-spacing:.1em;text-transform:uppercase">Como Funciona o FACIM</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="background:#111;border-radius:16px;padding:16px;display:flex;align-items:flex-start;gap:14px;border:1px solid rgba(255,107,0,0.15)">
+          <div style="width:38px;height:38px;border-radius:12px;background:#FF6B00;display:flex;align-items:center;justify-content:center;font-family:Sora,sans-serif;font-weight:900;color:#fff;font-size:16px;flex-shrink:0">1</div>
+          <div>
+            <div style="font-weight:800;color:#fff;margin-bottom:4px">Activa o teu VIP</div>
+            <div style="font-size:12px;color:#888;line-height:1.5">Escolhe um plano VIP e faz o depósito via M-Pesa ou e-Mola. O admin aprova em minutos.</div>
+            <div style="margin-top:8px;display:inline-block;background:rgba(255,107,0,0.15);border:1px solid rgba(255,107,0,0.3);border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;color:#FF6B00">Desde 350 MT</div>
+          </div>
+        </div>
+
+        <div style="background:#111;border-radius:16px;padding:16px;display:flex;align-items:flex-start;gap:14px;border:1px solid rgba(255,107,0,0.15)">
+          <div style="width:38px;height:38px;border-radius:12px;background:#FF6B00;display:flex;align-items:center;justify-content:center;font-family:Sora,sans-serif;font-weight:900;color:#fff;font-size:16px;flex-shrink:0">2</div>
+          <div>
+            <div style="font-weight:800;color:#fff;margin-bottom:4px">Ganha 20% ao dia</div>
+            <div style="font-size:12px;color:#888;line-height:1.5">O teu saldo cresce automaticamente todos os dias com 20% de rendimento. Sem esforço.</div>
+            <div style="margin-top:8px;display:inline-block;background:rgba(255,107,0,0.15);border:1px solid rgba(255,107,0,0.3);border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;color:#FF6B00">Automático</div>
+          </div>
+        </div>
+
+        <div style="background:#111;border-radius:16px;padding:16px;display:flex;align-items:flex-start;gap:14px;border:1px solid rgba(255,107,0,0.15)">
+          <div style="width:38px;height:38px;border-radius:12px;background:#FF6B00;display:flex;align-items:center;justify-content:center;font-family:Sora,sans-serif;font-weight:900;color:#fff;font-size:16px;flex-shrink:0">3</div>
+          <div>
+            <div style="font-weight:800;color:#fff;margin-bottom:4px">Tarefa diária +30 MT</div>
+            <div style="font-size:12px;color:#888;line-height:1.5">Partilha o link todos os dias e ganha 30 MT de bónus extra. Simples e rápido.</div>
+            <div style="margin-top:8px;display:inline-block;background:rgba(255,107,0,0.15);border:1px solid rgba(255,107,0,0.3);border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;color:#FF6B00">Todo dia</div>
+          </div>
+        </div>
+
+        <div style="background:#111;border-radius:16px;padding:16px;display:flex;align-items:flex-start;gap:14px;border:1px solid rgba(255,107,0,0.15)">
+          <div style="width:38px;height:38px;border-radius:12px;background:#FF6B00;display:flex;align-items:center;justify-content:center;font-family:Sora,sans-serif;font-weight:900;color:#fff;font-size:16px;flex-shrink:0">4</div>
+          <div>
+            <div style="font-weight:800;color:#fff;margin-bottom:4px">Convida e ganha 50 MT</div>
+            <div style="font-size:12px;color:#888;line-height:1.5">Por cada amigo que activar o VIP com o teu código, recebes 50 MT de comissão.</div>
+            <div style="margin-top:8px;display:inline-block;background:rgba(255,107,0,0.15);border:1px solid rgba(255,107,0,0.3);border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700;color:#FF6B00">Sem limite</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA Button -->
+      <button onclick="closeWelcome()" style="width:100%;margin-top:24px;background:linear-gradient(135deg,#FF6B00,#FFA500);border:none;border-radius:16px;padding:16px;font-family:Sora,sans-serif;font-size:16px;font-weight:800;color:#fff;cursor:pointer;box-shadow:0 6px 24px rgba(255,107,0,0.4);letter-spacing:.03em">
+        🚀 Começar a Ganhar
+      </button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
